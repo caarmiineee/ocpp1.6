@@ -11,6 +11,7 @@ from ocpp.v16 import call_result
 class ChargePoint(cp):
     @on(Action.BootNotification)
     def on_boot_notitication(self, charge_point_vendor, charge_point_model, **kwargs):
+        print(self)
         return call_result.BootNotificationPayload(
             current_time=datetime.utcnow().isoformat(),
             interval=10,
@@ -32,7 +33,7 @@ async def on_connect(websocket, path):
 async def main():
     server = await websockets.serve(
         on_connect,
-        '127.0.0.2',
+        '0.0.0.0',
         9000,
         subprotocols=['ocpp1.6']
     )

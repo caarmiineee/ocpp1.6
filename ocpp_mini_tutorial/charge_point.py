@@ -1,44 +1,32 @@
 import asyncio
 import websockets
-from datetime import datetime
 
-from ocpp.routing import on
-from ocpp.v16 import ChargePoint as cp
-from ocpp.v16.enums import Action, RegistrationStatus
-from ocpp.v16 import call_result
-import subprocess
+from ocpp.v16 import call, ChargePoint as cp
+from ocpp.v16.enums import RegistrationStatus
 
 
 class ChargePoint(cp):
-    @on(Action.BootNotification)
-    def on_boot_notitication(self, charge_point_vendor, charge_point_model, **kwargs):
-        return call_result.BootNotificationPayload(
-            current_time=datetime.utcnow().isoformat(),
-            interval=10,
-            status=RegistrationStatus.accepted
+    async def send_boot_notification(self):
+        request = call.BootNotificationPayload(
+            charge_point_model="Optimus",
+            charge_point_vendor="The Mobility House"
         )
 
+        response = await self.call(request)
 
-async def on_connect(websocket, path):
-    """ For every new charge point that connects, create a ChargePoint instance
-    and start listening for messages.
-
-    """
-    charge_point_id = path.strip('/')
-    cp = ChargePoint(charge_point_id, websocket)
-
-    await cp.start()
+        if response.status ==  RegistrationStatus.accepted:
+            print("Connected to central system.")
 
 
 async def main():
-    server = await websockets.serve(
-        on_connect,
-        '127.0.0.1',
-        9001,
-        subprotocols=['ocpp1.6']
-    )
+    async with websockets.connect(
+        'ws://localhost:9000/CP_1',
+         subprotocols=['ocpp1.6']
+    ) as ws:
 
-    await server.wait_closed()
+        cp = ChargePoint('CP_1', ws)
+
+        await asyncio.gather(cp.start(), cp.send_boot_notification())
 
 
 if __name__ == '__main__':
